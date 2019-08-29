@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # apollo config db info
-apollo_config_db_url=jdbc:mysql://localhost:3306/ApolloConfigDB?characterEncoding=utf8
-apollo_config_db_username=root
-apollo_config_db_password=
+apollo_config_db_url=jdbc:mysql://${DB_HOST}:${DB_PORT}/ApolloConfigDB?characterEncoding=utf8
+apollo_config_db_username=${DB_USER}
+apollo_config_db_password=${DB_PASSWORD}
 
 # apollo portal db info
-apollo_portal_db_url=jdbc:mysql://localhost:3306/ApolloPortalDB?characterEncoding=utf8
-apollo_portal_db_username=root
-apollo_portal_db_password=
+apollo_portal_db_url=jdbc:mysql://${DB_HOST}:${DB_PORT}/ApolloPortalDB?characterEncoding=utf8
+apollo_portal_db_username=${DB_USER}
+apollo_portal_db_password=${DB_PASSWORD}
 
 # =============== Please do not modify the following content =============== #
 
@@ -27,6 +27,8 @@ config_server_url=http://localhost:8080
 admin_server_url=http://localhost:8090
 eureka_service_url=$config_server_url/eureka/
 portal_url=http://localhost:8070
+config_homepage_url=http://${CONFIG_IP}:${CONFIG_PORT}
+admin_homepage_url=http://${ADMIN_IP}:${ADMIN_PORT}
 
 # JAVA OPTS
 BASE_JAVA_OPTS="-Denv=dev"
@@ -103,7 +105,7 @@ checkJava
 if [ "$1" = "start" ] ; then
   echo "==== starting service ===="
   echo "Service logging file is $SERVICE_LOG"
-  export JAVA_OPTS="$SERVER_JAVA_OPTS -Dlogging.file=./apollo-service.log -Dspring.datasource.url=$apollo_config_db_url -Dspring.datasource.username=$apollo_config_db_username -Dspring.datasource.password=$apollo_config_db_password"
+  export MY_JAVA_OPTS="$SERVER_JAVA_OPTS -Dlogging.file=./apollo-service.log -Dspring.datasource.url=$apollo_config_db_url -Dspring.datasource.username=$apollo_config_db_username -Dspring.datasource.password=$apollo_config_db_password"
 
   if [[ -f $SERVICE_JAR ]]; then
     rm -rf $SERVICE_JAR
@@ -112,7 +114,8 @@ if [ "$1" = "start" ] ; then
   ln $JAR_FILE $SERVICE_JAR
   chmod a+x $SERVICE_JAR
 
-  $SERVICE_JAR start --configservice --adminservice
+  export JAVA_OPTS="$MY_JAVA_OPTS -Deureka.instance.homePageUrl=$config_homepage_url"
+  $SERVICE_JAR start --configservice
 
   rc=$?
   if [[ $rc != 0 ]];
@@ -123,6 +126,10 @@ if [ "$1" = "start" ] ; then
 
   printf "Waiting for config service startup"
   checkServerAlive $config_server_url
+
+  #export JAVA_OPTS="$MY_JAVA_OPTS -Deureka.instance.homePageUrl=$admin_homepage_url"
+  export JAVA_OPTS="$MY_JAVA_OPTS"
+  $SERVICE_JAR start --adminservice
 
   rc=$?
   if [[ $rc != 0 ]];
